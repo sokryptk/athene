@@ -43,6 +43,10 @@ static int tplug_hp_enabled = 1;
 
 static struct workqueue_struct *tplug_wq;
 static struct delayed_work tplug_work;
+
+static struct workqueue_struct *tplug_resume_wq;
+static struct delayed_work tplug_resume_work;
+
 static unsigned int last_load[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 struct cpu_load_data {
@@ -181,8 +185,10 @@ static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj, struct k
 		case 0:
 		case 1:
 			tplug_hp_enabled = val;
+		break;
 		default:
 			pr_info("%s : invalid choice\n", THUNDERPLUG);
+		break;
 	}
 
 	if(tplug_hp_enabled == 1 && tplug_hp_enabled != last_val)
@@ -235,6 +241,25 @@ static unsigned int get_curr_load(unsigned int cpu)
 	return cur_load;
 }
 
+static void thunderplug_suspend(void)
+{
+	offline_cpus();
+
+	pr_info("%s: suspend\n", THUNDERPLUG);
+}
+
+static void __ref thunderplug_resume(void)
+{
+	cpus_online_all();
+
+	pr_info("%s: resume\n", THUNDERPLUG);
+}
+
+static void __cpuinit tplug_resume_work_fn(struct work_struct *work)
+{
+	thunderplug_resume();
+}
+
 static void __cpuinit tplug_work_fn(struct work_struct *work)
 {
 	int i;
@@ -244,12 +269,16 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 	{
 	case 0:
 		core_limit = 8;
+	break;
 	case 1:
 		core_limit = 4;
+	break;
 	case 2:
 		core_limit = 2;
+	break;
 	default:
 		core_limit = 8;
+	break;
 	}
 
 	for(i = 0 ; i < core_limit; i++)
@@ -291,16 +320,30 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 
 static void thunderplug_suspend(struct power_suspend *h)
 {
-	offline_cpus();
+       switch (event) {
+       case LCD_EVENT_ON_START:
+			isSuspended = false;
+			if(tplug_hp_enabled)
+				queue_delayed_work_on(0, tplug_wq, &tplug_work,
+								msecs_to_jiffies(sampling_time));
+			else
+				queue_delayed_work_on(0, tplug_resume_wq, &tplug_resume_work,
+		                      msecs_to_jiffies(10));
+			pr_info("thunderplug : resume called\n");
+               break;
+       case LCD_EVENT_ON_END:
+               break;
+       case LCD_EVENT_OFF_START:
+               break;
+       case LCD_EVENT_OFF_END:
+			isSuspended = true;
+			pr_info("thunderplug : suspend called\n");
+               break;
+       default:
+               break;
+       }
 
-	pr_info("%s: suspend\n", THUNDERPLUG);
-}
-
-static void __ref thunderplug_resume(struct power_suspend *h)
-{
-	cpus_online_all();
-
-	pr_info("%s: resume\n", THUNDERPLUG);
+       return 0;
 }
 
 static ssize_t thunderplug_ver_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
@@ -387,7 +430,11 @@ static int __init thunderplug_init(void)
 		tplug_wq = alloc_workqueue("tplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 
+		tplug_resume_wq = alloc_workqueue("tplug_resume",
+				WQ_HIGHPRI | WQ_UNBOUND, 1);
+
 		INIT_DELAYED_WORK(&tplug_work, tplug_work_fn);
+		INIT_DELAYED_WORK(&tplug_resume_work, tplug_resume_work_fn);
 		queue_delayed_work_on(0, tplug_wq, &tplug_work,
 		                      msecs_to_jiffies(10));
 
