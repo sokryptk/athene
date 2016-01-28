@@ -25,8 +25,7 @@
 #include <linux/msm_mdp.h>
 #include <linux/jiffies.h>
 #include <linux/ktime.h>
-
-
+#include <linux/display_state.h>
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
 #include "mdss_dropbox.h"
@@ -40,6 +39,12 @@
 #define DCS_CMD_GET_POWER_MODE 0x0A
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
+
+bool display_on = true;
+bool is_display_on()
+{
+    return display_on;
+     }
 
 #define CEIL(x, y)	(((x) + ((y)-1)) / (y))
 
@@ -901,7 +906,10 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
+	/* Ensure low persistence is disabled */
+        display_on = true;	
 	pinfo = &pdata->panel_info;
+
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1051,6 +1059,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
+
+           display_on = false;
 
 	if (ctrl->ds_registered) {
 		mdss_dba_utils_video_off(pinfo->dba_data);
