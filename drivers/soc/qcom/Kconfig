@@ -717,6 +717,9 @@ config MSM_VSENS
 
 	  Say yes to support these devices.
 
+config STATE_NOTIFIER
+        bool "State Notifier"
+
 source "drivers/soc/qcom/memshare/Kconfig"
 
 config BOOTINFO
