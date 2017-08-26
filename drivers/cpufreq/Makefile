@@ -101,3 +101,5 @@ obj-$(CONFIG_CPU_FREQ_STAT)		+= cpufreq_persistent_stats.o
 CFLAGS_qcom-cpufreq.o := -DDEBUG
 obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
 CFLAGS_lazyplug.o			+= -finline-functions
+
+CFLAGS_qcom-cpufreq.o := -DDEBUG
