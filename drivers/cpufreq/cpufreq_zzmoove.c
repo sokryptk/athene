@@ -31,6 +31,7 @@
 // ZZ: disable kernel power management
 // #define DISABLE_POWER_MANAGEMENT
 
+#include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)
 #include <linux/earlysuspend.h>
@@ -727,6 +728,7 @@ static struct dbs_tuners {
 	unsigned int inputboost_typingbooster_up_threshold;
 	unsigned int inputboost_typingbooster_cores;
 #endif /* ENABLE_INPUTBOOSTER */
+<<<<<<< HEAD
 
 #ifdef ENABLE_MUSIC_LIMITS
 	// ff: Music Detection
@@ -738,6 +740,19 @@ static struct dbs_tuners {
 	unsigned int music_state;				// ff: music state
 #endif /* ENABLE_MUSIC_LIMITS */
 
+=======
+
+#ifdef ENABLE_MUSIC_LIMITS
+	// ff: Music Detection
+	unsigned int music_max_freq;				// ff: music max freq
+	unsigned int music_min_freq;				// ff: music min freq
+#ifdef ENABLE_HOTPLUGGING
+	unsigned int music_min_cores;				// ff: music min freq
+#endif /* ENABLE_HOTPLUGGING */
+	unsigned int music_state;				// ff: music state
+#endif /* ENABLE_MUSIC_LIMITS */
+
+>>>>>>> 08e5399...  Change Configuration Script of ZZMOOVE to what Zanezam has on his git :  https://github.com/zanezam/cpufreq-governor-zzmoove.git
 // ZZ: set tuneable default values
 } dbs_tuners_ins = {
 #ifdef ENABLE_PROFILES_SUPPORT
@@ -1308,6 +1323,7 @@ static int interactive_input_connect(struct input_handler *handler, struct input
 		goto err1;
 
 	return 0;
+<<<<<<< HEAD
 
 err1:
 	input_unregister_handle(handle);
@@ -1329,6 +1345,29 @@ static void interactive_input_disconnect(struct input_handle *handle)
 	kfree(handle);
 }
 
+=======
+
+err1:
+	input_unregister_handle(handle);
+err2:
+	kfree(handle);
+	return error;
+}
+
+static void interactive_input_disconnect(struct input_handle *handle)
+{
+	// ff: reset counters
+	flg_ctr_inputboost = 0;
+	flg_ctr_inputboost_punch = 0;
+#ifdef ZZMOOVE_DEBUG
+	pr_info("[zzmoove/interactive_input_disconnect] inputbooster - unregistering\n");
+#endif /* ZZMOOVE_DEBUG */
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+>>>>>>> 08e5399...  Change Configuration Script of ZZMOOVE to what Zanezam has on his git :  https://github.com/zanezam/cpufreq-governor-zzmoove.git
 static const struct input_device_id interactive_ids[] = {
 	{ .driver_info = 1 },
 	{ },
