@@ -6,6 +6,6 @@ install:
 
 script: 
 - sudo chmod a+x build.sh 
-- sudo chmod a+x deploy-tg.sh 
+- sudo chmod a+x deploy.sh 
 - . build.sh
-- . deploy-tg.sh
+- . deploy.sh
