@@ -1,0 +1,11 @@
+language: c 
+
+install: 
+- sudo apt-get update --quiet 
+- sudo apt-get install build-essential gcc-multilib bc kernel-package libncurses5-dev bzip2 
+
+script: 
+- sudo chmod a+x build.sh 
+- sudo chmod a+x deploy-tg.sh 
+- . build.sh
+- . deploy-tg.sh
