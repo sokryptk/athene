@@ -32,6 +32,12 @@
 // #define DISABLE_POWER_MANAGEMENT
 
 // AP: use msm8974 lcd status notifier
+#define USE_LCD_NOTIFIER
+
+#include <linux/cpu.h>
+#ifdef USE_LCD_NOTIFIER
+#include <linux/lcd_notify.h>
+#endif /* USE_LCD_NOTIFIER */
 #include <linux/cpufreq.h>
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)
 #include <linux/earlysuspend.h>
