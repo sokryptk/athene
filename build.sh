@@ -23,7 +23,8 @@ make -j4
 echo " Copying zImage "
 cp -rf $PWD/arch/arm/boot/zImage $AKdir
 echo " Zip it up Boi! "
-cd $AKdir zip -qr9 $KernelZip *
+cd $AKdir
+zip -qr9 $KernelZip *
 cd ..
 cp -rf $AKdir/$KernelZip $PWD/builds/$KernelZip
 
