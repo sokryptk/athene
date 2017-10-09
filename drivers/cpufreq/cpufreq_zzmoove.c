@@ -31,6 +31,7 @@
 // ZZ: disable kernel power management
 // #define DISABLE_POWER_MANAGEMENT
 
+#include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)
 #include <linux/earlysuspend.h>
