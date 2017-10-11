@@ -31,13 +31,6 @@
 // ZZ: disable kernel power management
 // #define DISABLE_POWER_MANAGEMENT
 
-// lcd notifier
-
-
-#define USE_LCD_NOTIFIER
-#ifdef USE_LCD_NOTIFIER
-#include <linux/lcd_notify.h>
-#endif /* USE_LCD_NOTIFIER */
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)
