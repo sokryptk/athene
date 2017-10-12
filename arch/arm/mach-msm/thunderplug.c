@@ -1,4 +1,5 @@
 /* Copyright (c) 2015, Varun Chitre <varun.chitre15@gmail.com>
+ *                     Avinaba Dalal <d97.avinaba@gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -10,6 +11,7 @@
  * GNU General Public License for more details.
  *
  * A simple hotplugging driver optimized for Octa Core CPUs
+ * Tuned to Quad Core CPUs.
  */
 
 #include <linux/module.h>
@@ -22,10 +24,12 @@
 #include <linux/lcd_notify.h>
 #include <linux/cpufreq.h>
 
-static int suspend_cpu_num = 2, resume_cpu_num = 7;
+static int cpu_num = 3; //cpu_num = <total no. of cpus> - 1
+
+static int suspend_cpu_num = 2, resume_cpu_num = 3;
 static int endurance_level = 0;
-static int device_cpus = 8;
-static int core_limit = 8;
+static int device_cpus = 4;
+static int core_limit = 4;
 
 static bool isSuspended = false;
 
@@ -35,15 +39,12 @@ struct notifier_block lcd_worker;
 
 #define THUNDERPLUG "thunderplug"
 
-#define DRIVER_VERSION  2
-#define DRIVER_SUBVER 5
+#define DRIVER_VERSION  		2
+#define DRIVER_SUBVER 			5
 
-#define CPU_LOAD_THRESHOLD        (65)
+#define CPU_LOAD_THRESHOLD        	(65)
 
 #define DEF_SAMPLING_MS			(500)
-#define MIN_CPU_UP_TIME			(750)
-
-static int now[8], last_time[8];
 
 static int sampling_time = DEF_SAMPLING_MS;
 static int load_threshold = CPU_LOAD_THRESHOLD;
@@ -73,16 +74,40 @@ struct cpu_load_data {
 	cpumask_var_t related_cpus;
 };
 
+int tune_endurance(int endurance) {
+/*	Since this is a quad-core chip, to which ThunderPlug is being
+  	ported, but ThunderPlug imported was originally written for an
+  	Octa-core chip, certain modifications, rather tunings must be done
+  	for quad-core device.
+  	In this function, we will tune endurance_level, and handle possibly
+  	all cases.
+	AFAIK, originally, endurance_level = 0 meant normal (Octa-Core device)
+      	endurance_level = 1 meant quad-core device.
+     	endurance_level = 2 meant dual-core device.
+	Now we dont need quad-core mode, as our device is already quad-core.
+ 	We need only dual-core mode.
+	So if, endurance_level == 1, we set it to 0, to make sense, I guess :/.
+ 	We call this function where endurance_level is involved.
+	Enough of documentation for such a small function :D   
+*/
+	if(endurance == 1) {
+           endurance = 0;
+	   pr_info("%s: Endurance Level was quad-core, set it to default\n", THUNDERPLUG);
+	}
+        return endurance;
+} 
+
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static inline void offline_cpus(void)
 {
 	unsigned int cpu;
+	endurance_level = tune_endurance(endurance_level);
 	switch(endurance_level) {
-		case 1:
+		/*case 1:                                    We don't need quad-core mode on a quad-core device :p
 			if(suspend_cpu_num > 4)
 				suspend_cpu_num = 4;
-		break;
+		break;*/
 		case 2:
 			if(suspend_cpu_num > 2)
 				suspend_cpu_num = 2;
@@ -90,7 +115,7 @@ static inline void offline_cpus(void)
 		default:
 		break;
 	}
-	for(cpu = 7; cpu > (suspend_cpu_num - 1); cpu--) {
+	for(cpu = cpu_num; cpu > (suspend_cpu_num - 1); cpu--) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 	}
@@ -100,18 +125,19 @@ static inline void offline_cpus(void)
 static inline void cpus_online_all(void)
 {
 	unsigned int cpu;
+        endurance_level = tune_endurance(endurance_level);
 	switch(endurance_level) {
-	case 1:
+	case 0:
+		if(resume_cpu_num < cpu_num)
+			resume_cpu_num = cpu_num;
+	break;
+	/*case 1:                                                 
 		if(resume_cpu_num > 3 || resume_cpu_num == 1)
 			resume_cpu_num = 3;
-	break;
+	break;*/
 	case 2:
 		if(resume_cpu_num > 1)
 			resume_cpu_num = 1;
-	break;
-	case 0:
-		if(resume_cpu_num < 7)
-			resume_cpu_num = 7;
 	break;
 	default:
 	break;
@@ -128,7 +154,7 @@ static inline void cpus_online_all(void)
 static void __ref tplug_boost_work_fn(struct work_struct *work)
 {
 	int cpu;
-	for(cpu = 1; cpu < 4; cpu++) {
+	for(cpu = 1; cpu < 4; cpu++) {    //Lets use all cores to wake-up device and get things going in Yureka?
 		if(cpu_is_offline(cpu))
 			cpu_up(cpu);
 	}
@@ -206,7 +232,7 @@ static ssize_t thunderplug_suspend_cpus_store(struct kobject *kobj, struct kobj_
 {
 	int val;
 	sscanf(buf, "%d", &val);
-	if(val < 1 || val > 8)
+	if(val < 1 || val > cpu_num + 1)
 		pr_info("%s: suspend cpus off-limits\n", THUNDERPLUG);
 	else
 		suspend_cpu_num = val;
@@ -264,8 +290,8 @@ static ssize_t thunderplug_hp_enabled_show(struct kobject *kobj, struct kobj_att
 static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
-	sscanf(buf, "%d", &val);
 	int last_val = tplug_hp_enabled;
+	sscanf(buf, "%d", &val);
 	switch(val)
 	{
 		case 0:
@@ -373,20 +399,17 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 {
 	int i;
 	unsigned int load[8], avg_load[8];
-
+        endurance_level = tune_endurance(endurance_level);
 	switch(endurance_level)
 	{
 	case 0:
-		core_limit = 8;
-	break;
-	case 1:
-		core_limit = 4;
+		core_limit = cpu_num + 1;
 	break;
 	case 2:
 		core_limit = 2;
 	break;
 	default:
-		core_limit = 8;
+		core_limit = cpu_num + 1;
 	break;
 	}
 
@@ -406,22 +429,17 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 	if(cpu_online(i) && avg_load[i] > load_threshold && cpu_is_offline(i+1))
 	{
 	if(DEBUG)
-		pr_info("%s : bringing back cpu%d\n", THUNDERPLUG,i);
-		if(!((i+1) > 7)) {
-			last_time[i+1] = ktime_to_ms(ktime_get());
-			cpu_up(i+1);
-		}
+	   pr_info("%s : bringing back cpu%d\n", THUNDERPLUG,i+1);
+	if(!((i+1) > cpu_num))  
+	   cpu_up(i+1);
 	}
 	else if(cpu_online(i) && avg_load[i] < load_threshold && cpu_online(i+1))
 	{
-		if(DEBUG)
-			pr_info("%s : offlining cpu%d\n", THUNDERPLUG,i);
-			if(!(i+1)==0) {
-				now[i+1] = ktime_to_ms(ktime_get());
-				if((now[i+1] - last_time[i+1]) > MIN_CPU_UP_TIME)
-					cpu_down(i+1);
-			}
-		}
+	if(DEBUG)
+		pr_info("%s : offlining cpu%d\n", THUNDERPLUG,i+1);
+		if(!(i+1)==0)
+			cpu_down(i+1);
+	}
 	}
 
 	if(tplug_hp_enabled != 0 && !isSuspended)
@@ -578,5 +596,5 @@ static int __init thunderplug_init(void)
 
 MODULE_LICENSE("GPL and additional rights");
 MODULE_AUTHOR("Varun Chitre <varun.chitre15@gmail.com>");
-MODULE_DESCRIPTION("Hotplug driver for OctaCore CPU");
+MODULE_DESCRIPTION("Hotplug driver for OctaCore CPU, tuned to Quad-Core CPU");
 late_initcall(thunderplug_init);
