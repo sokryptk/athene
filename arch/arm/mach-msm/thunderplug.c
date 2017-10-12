@@ -43,8 +43,6 @@ struct notifier_block lcd_worker;
 #define DEF_SAMPLING_MS			(500)
 #define MIN_CPU_UP_TIME			(750)
 
-static int now[8], last_time[8];
-
 static int sampling_time = DEF_SAMPLING_MS;
 static int load_threshold = CPU_LOAD_THRESHOLD;
 
@@ -264,8 +262,8 @@ static ssize_t thunderplug_hp_enabled_show(struct kobject *kobj, struct kobj_att
 static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
-	sscanf(buf, "%d", &val);
-	int last_val = tplug_hp_enabled;
+ 	int last_val = tplug_hp_enabled;
+        sscanf(buf, "%d", &val); 
 	switch(val)
 	{
 		case 0:
@@ -407,21 +405,16 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 	{
 	if(DEBUG)
 		pr_info("%s : bringing back cpu%d\n", THUNDERPLUG,i);
-		if(!((i+1) > 7)) {
-			last_time[i+1] = ktime_to_ms(ktime_get());
+		if(!((i+1) > 7))
 			cpu_up(i+1);
 		}
-	}
 	else if(cpu_online(i) && avg_load[i] < load_threshold && cpu_online(i+1))
 	{
 		if(DEBUG)
 			pr_info("%s : offlining cpu%d\n", THUNDERPLUG,i);
-			if(!(i+1)==0) {
-				now[i+1] = ktime_to_ms(ktime_get());
-				if((now[i+1] - last_time[i+1]) > MIN_CPU_UP_TIME)
-					cpu_down(i+1);
+			if(!(i+1)==0)
+                         	cpu_down(i+1);
 			}
-		}
 	}
 
 	if(tplug_hp_enabled != 0 && !isSuspended)
