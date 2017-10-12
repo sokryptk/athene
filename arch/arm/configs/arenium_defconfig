@@ -452,6 +452,12 @@ CONFIG_MULTI_IRQ_HANDLER=y
 # CONFIG_FIQ_DEBUGGER is not set
 
 #
+# Misc
+#
+CONFIG_THUNDERPLUG_CONTROL=y
+
+
+#
 # Bus support
 #
 # CONFIG_PCI_SYSCALL is not set
