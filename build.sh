@@ -11,11 +11,16 @@ if [[ -e $AKdir/zImage ]] ; then rm -rf $AKdir/zImage ; fi
 if [[ -e $AKdir/$KernelZip ]] ; then rm -rf $AKdir/$KernelZip ; fi
 if [[ ! -e $PWD/builds ]] ; then mkdir $PWD/builds ; fi
 
-# Initiation
-make clean && make mrproper
+# export
 export ARCH=arm
 export SUBARCH=arm
 export CROSS_COMPILE=$PWD/toolchain/arm-eabi-4.8/bin/arm-eabi-
+export KBUILD_BUILD_USER=krypticallusion
+export KBUILD_BUILD_HOST=krypton
+
+
+# Initiation
+make clean && make mrproper
 make arenium_defconfig
 make -j4
 
