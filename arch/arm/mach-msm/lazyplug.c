@@ -250,7 +250,6 @@ static void __ref cpu_all_ctrl(bool online) {
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int avg_nr_run = avg_nr_running();
 	unsigned int nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
@@ -273,6 +272,7 @@ static unsigned int calculate_thread_stats(void)
 		nr_fshift = num_possible_cpus() - 1;
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
+                unsigned int avg_nr_run;
 		unsigned int nr_threshold;
 		nr_threshold = current_profile[nr_run - 1];
 
@@ -314,7 +314,7 @@ static void update_per_cpu_stat(void)
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
-		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
+//		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 #ifdef DEBUG_LAZYPLUG
 		pr_info("cpu %u nr_running => %lu\n", cpu,
 			l_ip_info->cpu_nr_running);
